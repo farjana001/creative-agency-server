@@ -24,6 +24,7 @@ client.connect(err => {
     const orderCollection= client.db("creativeDatabase").collection("OrderData");
     const reviewCollection= client.db("creativeDatabase").collection("reviews");
     const adminEmailCollection= client.db("creativeDatabase").collection("makeAdmin");
+    const statusCollection= client.db("creativeDatabase").collection("status");
     
 
     // for image upload
@@ -32,15 +33,41 @@ client.connect(err => {
         const title = req.body.title;
         const description = req.body.description;
         console.log(title, description, file);
-        file.mv(`${__dirname}/services/${file.name}`, err => {
+
+        const filePath = `${__dirname}/services/${file.name}`;
+        file.mv(filePath, err => {
             if(err){
-                console.log(err);
-                return res.status(500).send({msg: 'Failed to upload image'})
+                console.log(err)
+                res.status(500).send({msg: 'Failed to upload image'})
             }
-            return res.send({name: file.name, path: `${file.name}`})
+            const newImg = fs.readFileSync(filePath);
+            const encImg = newImg.toString('base64');
+            var image = {
+                contentType: req.files.file.mimetype,
+                size: req.files.file.size,
+                img: Buffer(encImg, 'base64')
+            };
+
+            adminServiceCollection.insertOne({title, description, image})
+            .then(result => {
+                fs.remove(filePath, error => {
+                    if(error){console.log(error)}
+                    res.send(result.insertedCount > 0 )
+                });
+               
+            })
+            // return res.send({name: file.name, path: `${file.name}`})
         })
     })
     
+
+    // showing serviceDat to ui
+    app.get('/addService', (req, res) => {
+        adminServiceCollection.find({})
+        .toArray((err, documents) => {
+            res.send(documents);
+        })  
+    })
 
     // for sending order data
     app.post('/addOrder', (req, res) => {
@@ -99,6 +126,16 @@ client.connect(err => {
             adminEmailCollection.find({})
             .toArray((err, documents) => {
                 res.send(documents)
+            })
+        })
+
+
+        // for status button
+        app.post('/status', (req, res) => {
+            const text = req.body;
+            statusCollection.insertOne(text)
+            .then(result => {
+                res.send(result.insertedCount > 0)
             })
         })
 
