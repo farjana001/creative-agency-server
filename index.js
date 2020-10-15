@@ -22,6 +22,8 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 client.connect(err => {
     const adminServiceCollection= client.db("creativeDatabase").collection("serviceData");
     const orderCollection= client.db("creativeDatabase").collection("OrderData");
+    const reviewCollection= client.db("creativeDatabase").collection("reviews");
+    const adminEmailCollection= client.db("creativeDatabase").collection("makeAdmin");
     
 
     // for image upload
@@ -60,12 +62,45 @@ client.connect(err => {
 
     // for single user order list 
     app.get('/singleUserOrder', (req, res) => {
-        // console.log(req.query.email);
         orderCollection.find({email: req.query.email})
         .toArray((err, documents) => {
             res.send(documents)
         })
     })
+
+        // for sending client review to server
+        app.post('/review', (req, res) => {
+            const order = req.body;
+            reviewCollection.insertOne(order)
+            .then(result => {
+                res.send(result.insertedCount > 0 )
+            })
+        })
+
+        // for showing review in ui
+        app.get('/review', (req, res) => {
+            reviewCollection.find({})
+            .toArray((err, documents) => {
+                res.send(documents)
+            })
+        })
+
+        // making admin api
+        app.post('/adminEmail', (req, res) => {
+            const email = req.body;
+            adminEmailCollection.insertOne(email)
+            .then(result => {
+                res.send(result.insertedCount > 0)
+            })
+        })
+
+        // getting admin email collection
+        app.get('/adminEmail', (req, res) => {
+            adminEmailCollection.find({})
+            .toArray((err, documents) => {
+                res.send(documents)
+            })
+        })
 
 });
 
